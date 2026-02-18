@@ -11,10 +11,7 @@ public interface IModPacketHandler<MSG> {
     MSG decode(PacketBuffer buf);
     
     default void enqueueHandleSetHandled(MSG msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            handle(msg, ctx);
-        });
-        ctx.get().setPacketHandled(true);
+        PacketContextUtil.enqueueWorkAndSetHandled(ctx, () -> handle(msg, ctx));
     }
     void handle(MSG msg, Supplier<NetworkEvent.Context> ctx);
     

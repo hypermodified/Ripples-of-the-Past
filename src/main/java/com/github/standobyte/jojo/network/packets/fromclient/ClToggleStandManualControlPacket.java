@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import com.github.standobyte.jojo.action.ActionConditionResult;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.github.standobyte.jojo.power.impl.stand.StandUtil;
 
@@ -29,8 +30,8 @@ public class ClToggleStandManualControlPacket {
     
         @Override
         public void handle(ClToggleStandManualControlPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            PlayerEntity player = ctx.get().getSender();
-            if (player.isAlive()) {
+            PlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player != null && player.isAlive()) {
                 IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                     if (power.hasPower()) {
                         if (power.getType().canBeManuallyControlled()) {
