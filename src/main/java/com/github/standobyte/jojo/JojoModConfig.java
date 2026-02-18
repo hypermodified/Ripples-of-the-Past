@@ -2,6 +2,7 @@ package com.github.standobyte.jojo;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -12,32 +13,25 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.InMemoryCommentedFormat;
-import com.github.standobyte.jojo.client.ClientUtil;
-import com.github.standobyte.jojo.init.power.JojoCustomRegistries;
-import com.github.standobyte.jojo.network.NetworkUtil;
-import com.github.standobyte.jojo.network.PacketManager;
-import com.github.standobyte.jojo.network.packets.fromserver.CommonConfigPacket;
-import com.github.standobyte.jojo.network.packets.fromserver.ResetSyncedCommonConfigPacket;
-import com.github.standobyte.jojo.power.impl.nonstand.type.hamon.HamonData;
-import com.github.standobyte.jojo.power.impl.stand.ResolveCounter;
-import com.github.standobyte.jojo.power.impl.stand.StandUtil;
-import com.github.standobyte.jojo.power.impl.stand.type.StandType;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Floats;
 
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.server.ServerLifecycleHooks;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
-@EventBusSubscriber(modid = JojoMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "jojo", bus = EventBusSubscriber.Bus.MOD)
 public class JojoModConfig {
+    private static final String MOD_ID = "jojo";
+    private static final float DEFAULT_MAX_BREATHING_LEVEL = 100F;
+    private static final Double[] DEFAULT_MAX_RESOLVE_VALUES = {2500.0, 10000.0, 25000.0, 50000.0, 32500.0};
     
     public static class Common {
         private boolean loaded = false;
@@ -73,9 +67,9 @@ public class JojoModConfig {
         public final ForgeConfigSpec.IntValue arrowDurabilityBeetle;
         public final ForgeConfigSpec.IntValue standXpCostInitial;
         public final ForgeConfigSpec.IntValue standXpCostIncrease;
-        public final ForgeConfigSpec.EnumValue<StandUtil.StandRandomPoolFilter> standRandomPoolFilter;
+        public final ForgeConfigSpec.EnumValue<StandRandomPoolFilter> standRandomPoolFilter;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> bannedStands;
-        private List<StandType<?>> bannedStandsSynced = null;
+        private List<ResourceLocation> bannedStandsSynced = null;
         private List<ResourceLocation> bannedStandsResLocs;
 
 //        public final ForgeConfigSpec.BooleanValue abilitiesBreakBlocks;
@@ -91,6 +85,9 @@ public class JojoModConfig {
         public final ForgeConfigSpec.BooleanValue endermenBeyondTimeSpace;
         public final ForgeConfigSpec.BooleanValue saveDestroyedBlocks;
         public final ForgeConfigSpec.BooleanValue spawnCocoJumboTurtle;
+        public final ForgeConfigSpec.BooleanValue enableWorldgen;
+        public final ForgeConfigSpec.BooleanValue enableNonStandPowers;
+        public final ForgeConfigSpec.BooleanValue enableOptionalCompat;
         
         private Common(ForgeConfigSpec.Builder builder) {
             this(builder, null);
@@ -156,7 +153,7 @@ public class JojoModConfig {
                     breathingTrainingMultiplier = builder
                             .comment("    Breathing training growth multiplier.")
                             .translation("jojo.config.breathingTrainingMultiplier")
-                            .defineInRange("breathingTrainingMultiplier", 1.0, 0.0, HamonData.MAX_BREATHING_LEVEL);
+                            .defineInRange("breathingTrainingMultiplier", 1.0, 0.0, DEFAULT_MAX_BREATHING_LEVEL);
                     
                     breathingTrainingDeterioration = builder
                             .comment("    Whether or not breathing training deteriorates over time.")
@@ -168,7 +165,7 @@ public class JojoModConfig {
                                     "     If the Breathing training level is too low, the player won't be able to reach higher levels of the Hamon stats.",
                                     "     By default this mechanic is disabled (the value is set to -1).")
                            .translation("jojo.config.breathingStatGap")
-                           .defineInRange("breathingHamonStatGap", -1, -1, (int) HamonData.MAX_BREATHING_LEVEL);
+                           .defineInRange("breathingHamonStatGap", -1, -1, (int) DEFAULT_MAX_BREATHING_LEVEL);
                     
                     mixHamonTechniques = builder
                             .comment("    Whether or not picking skills from different character-specific Hamon techniques is allowed.")
@@ -249,7 +246,7 @@ public class JojoModConfig {
                                  "     LEAST_TAKEN - can only choose from the Stands less players on the server have", 
                                  "     NOT_TAKEN -   can only give a Stand no other player on the server has gotten")
                         .translation("jojo.config.standArrowMode")
-                        .defineEnum("standArrowMode", StandUtil.StandRandomPoolFilter.NONE);
+                        .defineEnum("standArrowMode", StandRandomPoolFilter.NONE);
                 
                 bannedStands = builder
                         .comment("    List of Stands excluded from the pool used by Arrows, \"/stand random\" and \"/standdisc random\".",
@@ -274,7 +271,7 @@ public class JojoModConfig {
                                      "     Decrease these values to make getting to each level easier.", 
                                      "     All values must be higher than 0.")
                             .translation("jojo.config.resolveLvlPoints")
-                            .defineList("resolveLvlPoints", Arrays.asList(ResolveCounter.DEFAULT_MAX_RESOLVE_VALUES), e -> isElementNonNegativeFloat(e, true));
+                            .defineList("resolveLvlPoints", Arrays.asList(DEFAULT_MAX_RESOLVE_VALUES), e -> isElementNonNegativeFloat(e, true));
                 builder.pop();
 
                 builder.push("Time Stop");
@@ -326,6 +323,23 @@ public class JojoModConfig {
                     .comment("    Whether or not a turtle mob that can get Mr.President Stand spawns naturally.")
                     .translation("jojo.config.spawnCocoJumboTurtle")
                     .define("spawnCocoJumboTurtle", true);
+
+            builder.comment(" Temporary feature gates useful for staged porting / debug builds.").push("Feature gates");
+                enableWorldgen = builder
+                        .comment("    Enables worldgen-related systems (structures, features, dimensions and their setup).")
+                        .translation("jojo.config.enableWorldgen")
+                        .define("enableWorldgen", false);
+
+                enableNonStandPowers = builder
+                        .comment("    Enables non-stand gameplay systems (Hamon, Vampirism, Pillarman).")
+                        .translation("jojo.config.enableNonStandPowers")
+                        .define("enableNonStandPowers", false);
+
+                enableOptionalCompat = builder
+                        .comment("    Enables optional compatibility integrations initialized during InterMod phase.")
+                        .translation("jojo.config.enableOptionalCompat")
+                        .define("enableOptionalCompat", false);
+            builder.pop();
             
             endermenBeyondTimeSpace = builder
                     .comment("    Disable this to make endermen also be frozen in stopped time.",
@@ -353,31 +367,78 @@ public class JojoModConfig {
         }
         
         private void initBannedStands() {
-            IForgeRegistry<StandType<?>> registry = JojoCustomRegistries.STANDS.getRegistry();
-            
             Stream<ResourceLocation> resLocs = bannedStandsSynced != null ? 
-                    bannedStandsSynced.stream()
-                    .map(StandType::getRegistryName)
-                    
-                    : bannedStands.get().stream()
-                    .map(s -> {
-                        ResourceLocation resLoc = new ResourceLocation(s);
-                        if ("minecraft".equals(resLoc.getNamespace())) {
-                            resLoc = new ResourceLocation(JojoMod.MOD_ID, resLoc.getPath());
-                        }
-                        return resLoc;
-                    })
-                    .filter(resLoc -> registry.containsKey(resLoc));
+                    bannedStandsSynced.stream() : bannedStands.get().stream()
+                    .map(ResourceLocation::tryParse)
+                    .filter(resLoc -> resLoc != null)
+                    .map(this::normalizeRegistryName);
             
             bannedStandsResLocs = resLocs
+                    .distinct()
                     .collect(Collectors.toList());
         }
         
-        public boolean isStandBanned(StandType<?> stand) {
-            return bannedStandsResLocs.contains(stand.getRegistryName());
+        public boolean isStandBanned(Object stand) {
+            ResourceLocation registryName = getRegistryName(stand);
+            return registryName != null && bannedStandsResLocs.contains(registryName);
         }
         
+        private static ResourceLocation getRegistryName(Object stand) {
+            if (stand == null) {
+                return null;
+            }
+            try {
+                Object value = stand.getClass().getMethod("getRegistryName").invoke(stand);
+                return value instanceof ResourceLocation ? (ResourceLocation) value : null;
+            }
+            catch (ReflectiveOperationException e) {
+                return null;
+            }
+        }
         
+        private ResourceLocation normalizeRegistryName(ResourceLocation resLoc) {
+            if ("minecraft".equals(resLoc.getNamespace())) {
+                return new ResourceLocation(MOD_ID, resLoc.getPath());
+            }
+            return resLoc;
+        }
+        
+        public enum StandRandomPoolFilter {
+            NONE {
+                @Override
+                public <T> List<T> limitStandPool(Object world, List<T> availableStands) {
+                    return availableStands;
+                }
+            },
+            LEAST_TAKEN {
+                @Override
+                public <T> List<T> limitStandPool(Object world, List<T> availableStands) {
+                    return applyServerStandPoolFilter(world, availableStands, "getLeastTakenStands");
+                }
+            },
+            NOT_TAKEN {
+                @Override
+                public <T> List<T> limitStandPool(Object world, List<T> availableStands) {
+                    return applyServerStandPoolFilter(world, availableStands, "getNotTakenStands");
+                }
+            };
+
+            public abstract <T> List<T> limitStandPool(Object world, List<T> availableStands);
+
+            @SuppressWarnings("unchecked")
+            private static <T> List<T> applyServerStandPoolFilter(Object world, List<T> availableStands, String filterMethod) {
+                try {
+                    Class<?> saveFileUtilCapProvider = Class.forName("com.github.standobyte.jojo.capability.world.SaveFileUtilCapProvider");
+                    Object server = world.getClass().getMethod("getServer").invoke(world);
+                    Object cap = saveFileUtilCapProvider.getMethod("getSaveFileCap", server.getClass()).invoke(null, server);
+                    Object result = cap.getClass().getMethod(filterMethod, List.class).invoke(cap, availableStands);
+                    return result instanceof List ? (List<T>) result : availableStands;
+                }
+                catch (ReflectiveOperationException | RuntimeException e) {
+                    return availableStands;
+                }
+            }
+        }
 
         public static class SyncedValues {
             private final boolean keepStandOnDeath;
@@ -405,8 +466,8 @@ public class JojoModConfig {
 
             private final int standXpCostInitial;
             private final int standXpCostIncrease;
-            private final StandUtil.StandRandomPoolFilter standRandomPoolMode;
-            private final List<StandType<?>> bannedStands;
+            private final StandRandomPoolFilter standRandomPoolMode;
+            private final List<ResourceLocation> bannedStands;
             
 //            private final boolean abilitiesBreakBlocks;
 //            private final double standDamageMultiplier;
@@ -418,25 +479,28 @@ public class JojoModConfig {
             private final int timeStopChunkRange;
             
             private final boolean endermenBeyondTimeSpace;
+            private final boolean enableWorldgen;
+            private final boolean enableNonStandPowers;
+            private final boolean enableOptionalCompat;
             
-            public SyncedValues(PacketBuffer buf) {
+            public SyncedValues(FriendlyByteBuf buf) {
 //                hamonPointsMultiplier = buf.readDouble();
 //                breathingTrainingMultiplier = buf.readDouble();
                 breathingStatGap = buf.readVarInt();
                 techniqueSkillsRequirement = buf.readVarIntArray();
                 
-                maxBloodMultiplier = NetworkUtil.readFloatArray(buf);
-//                bloodDrainMultiplier = NetworkUtil.readFloatArray(buf);
-                bloodTickDown = NetworkUtil.readFloatArray(buf);
-//                bloodHealCost = NetworkUtil.readFloatArray(buf);
+                maxBloodMultiplier = readFloatArray(buf);
+//                bloodDrainMultiplier = readFloatArray(buf);
+                bloodTickDown = readFloatArray(buf);
+//                bloodHealCost = readFloatArray(buf);
                 
                 standXpCostInitial = buf.readVarInt();
                 standXpCostIncrease = buf.readVarInt();
-                standRandomPoolMode = buf.readEnum(StandUtil.StandRandomPoolFilter.class);
-                bannedStands = NetworkUtil.readRegistryIdsSafe(buf, StandType.class);
+                standRandomPoolMode = buf.readEnum(StandRandomPoolFilter.class);
+                bannedStands = readResourceLocationList(buf);
                 
 //                standDamageMultiplier = buf.readDouble();
-                resolvePoints = NetworkUtil.readFloatArray(buf);
+                resolvePoints = readFloatArray(buf);
                 timeStopChunkRange = buf.readVarInt();
                 
                 byte[] flags = buf.readByteArray();
@@ -457,28 +521,32 @@ public class JojoModConfig {
                 endermenBeyondTimeSpace =           (flags[1] & 32) > 0;
                 mixHamonTechniques =                (flags[1] & 64) > 0;
                 hamonEnergyTicksDown =              (flags[1] & 128) > 0;
+
+                enableWorldgen =                    flags.length > 2 && (flags[2] & 1) > 0;
+                enableNonStandPowers =              flags.length > 2 && (flags[2] & 2) > 0;
+                enableOptionalCompat =              flags.length > 2 && (flags[2] & 4) > 0;
             }
 
-            public void writeToBuf(PacketBuffer buf) {
+            public void writeToBuf(FriendlyByteBuf buf) {
 //                buf.writeDouble(hamonPointsMultiplier);
 //                buf.writeDouble(breathingTrainingMultiplier);
                 buf.writeVarInt(breathingStatGap);
                 buf.writeVarIntArray(techniqueSkillsRequirement);
                 
-                NetworkUtil.writeFloatArray(buf, maxBloodMultiplier);
-//                NetworkUtil.writeFloatArray(buf, bloodDrainMultiplier);
-                NetworkUtil.writeFloatArray(buf, bloodTickDown);
-//                NetworkUtil.writeFloatArray(buf, bloodHealCost);
+                writeFloatArray(buf, maxBloodMultiplier);
+//                writeFloatArray(buf, bloodDrainMultiplier);
+                writeFloatArray(buf, bloodTickDown);
+//                writeFloatArray(buf, bloodHealCost);
                 
                 buf.writeVarInt(standXpCostInitial);
                 buf.writeVarInt(standXpCostIncrease);
                 buf.writeEnum(standRandomPoolMode);
-                NetworkUtil.writeRegistryIds(buf, bannedStands);
+                writeResourceLocationList(buf, bannedStands);
                 
 //                buf.writeDouble(standDamageMultiplier);
-                NetworkUtil.writeFloatArray(buf, resolvePoints);
+                writeFloatArray(buf, resolvePoints);
                 buf.writeVarInt(timeStopChunkRange);
-                byte[] flags = new byte[] {0, 0};
+                byte[] flags = new byte[] {0, 0, 0};
                 if (keepStandOnDeath)                   flags[0] |= 1;
                 if (keepHamonOnDeath)                   flags[0] |= 2;
                 if (keepVampirismOnDeath)               flags[0] |= 4;
@@ -496,6 +564,9 @@ public class JojoModConfig {
                 if (endermenBeyondTimeSpace)            flags[1] |= 32;
                 if (mixHamonTechniques)                 flags[1] |= 64;
                 if (hamonEnergyTicksDown)               flags[1] |= 128;
+                if (enableWorldgen)                     flags[2] |= 1;
+                if (enableNonStandPowers)               flags[2] |= 2;
+                if (enableOptionalCompat)               flags[2] |= 4;
                 buf.writeByteArray(flags);
             }
 
@@ -527,9 +598,7 @@ public class JojoModConfig {
                 standXpCostInitial = config.standXpCostInitial.get();
                 standXpCostIncrease = config.standXpCostIncrease.get();
                 standRandomPoolMode = config.standRandomPoolFilter.get();
-                bannedStands = config.bannedStandsResLocs.stream()
-                        .map(key -> JojoCustomRegistries.STANDS.getRegistry().getValue(key))
-                        .collect(Collectors.toList());
+                bannedStands = config.bannedStandsResLocs.stream().collect(Collectors.toList());
                 
 //                abilitiesBreakBlocks = config.abilitiesBreakBlocks.get();
 //                standDamageMultiplier = config.standDamageMultiplier.get()
@@ -539,6 +608,9 @@ public class JojoModConfig {
                 soulAscension = config.soulAscension.get();
                 timeStopChunkRange = config.timeStopChunkRange.get();
                 endermenBeyondTimeSpace = config.endermenBeyondTimeSpace.get();
+                enableWorldgen = config.enableWorldgen.get();
+                enableNonStandPowers = config.enableNonStandPowers.get();
+                enableOptionalCompat = config.enableOptionalCompat.get();
             }
             
             public void changeConfigValues() {
@@ -577,6 +649,9 @@ public class JojoModConfig {
                 COMMON_SYNCED_TO_CLIENT.soulAscension.set(soulAscension);
                 COMMON_SYNCED_TO_CLIENT.timeStopChunkRange.set(timeStopChunkRange);
                 COMMON_SYNCED_TO_CLIENT.endermenBeyondTimeSpace.set(endermenBeyondTimeSpace);
+                COMMON_SYNCED_TO_CLIENT.enableWorldgen.set(enableWorldgen);
+                COMMON_SYNCED_TO_CLIENT.enableNonStandPowers.set(enableNonStandPowers);
+                COMMON_SYNCED_TO_CLIENT.enableOptionalCompat.set(enableOptionalCompat);
                 
                 COMMON_SYNCED_TO_CLIENT.onLoadOrReload();
             }
@@ -617,19 +692,61 @@ public class JojoModConfig {
                 COMMON_SYNCED_TO_CLIENT.soulAscension.clearCache();
                 COMMON_SYNCED_TO_CLIENT.timeStopChunkRange.clearCache();
                 COMMON_SYNCED_TO_CLIENT.endermenBeyondTimeSpace.clearCache();
+                COMMON_SYNCED_TO_CLIENT.enableWorldgen.clearCache();
+                COMMON_SYNCED_TO_CLIENT.enableNonStandPowers.clearCache();
+                COMMON_SYNCED_TO_CLIENT.enableOptionalCompat.clearCache();
                 
                 COMMON_SYNCED_TO_CLIENT.onLoadOrReload();
             }
 
             
             
-            public static void syncWithClient(ServerPlayerEntity player) {
-                PacketManager.sendToClient(new CommonConfigPacket(new SyncedValues(COMMON_FROM_FILE)), player);
+            public static void syncWithClient(ServerPlayer player) {
+                sendToClient("com.github.standobyte.jojo.network.packets.fromserver.CommonConfigPacket", new SyncedValues(COMMON_FROM_FILE), player);
             }
             
-            public static void onPlayerLogout(ServerPlayerEntity player) {
-                PacketManager.sendToClient(new ResetSyncedCommonConfigPacket(), player);
+            public static void onPlayerLogout(ServerPlayer player) {
+                sendToClient("com.github.standobyte.jojo.network.packets.fromserver.ResetSyncedCommonConfigPacket", null, player);
             }
+        }
+    }
+
+    private static float[] readFloatArray(FriendlyByteBuf buf) {
+        int size = buf.readVarInt();
+        float[] values = new float[size];
+        for (int i = 0; i < size; i++) {
+            values[i] = buf.readFloat();
+        }
+        return values;
+    }
+
+    private static void writeFloatArray(FriendlyByteBuf buf, float[] values) {
+        buf.writeVarInt(values.length);
+        for (float value : values) {
+            buf.writeFloat(value);
+        }
+    }
+
+    private static void sendToClient(String packetClassName, @Nullable Object packetArg, ServerPlayer player) {
+        try {
+            Class<?> packetManagerClass = Class.forName("com.github.standobyte.jojo.network.PacketManager");
+            Class<?> packetClass = Class.forName(packetClassName);
+            Object packet = packetArg != null
+                    ? packetClass.getConstructor(packetArg.getClass()).newInstance(packetArg)
+                    : packetClass.getConstructor().newInstance();
+            Arrays.stream(packetManagerClass.getMethods())
+                    .filter(method -> method.getName().equals("sendToClient") && method.getParameterCount() == 2)
+                    .filter(method -> method.getParameterTypes()[0] == Object.class)
+                    .filter(method -> method.getParameterTypes()[1].isAssignableFrom(player.getClass()))
+                    .findFirst()
+                    .ifPresent(method -> {
+                        try {
+                            method.invoke(null, packet, player);
+                        }
+                        catch (ReflectiveOperationException ignored) {}
+                    });
+        }
+        catch (ReflectiveOperationException ignored) {
         }
     }
     
@@ -661,21 +778,21 @@ public class JojoModConfig {
     }
     
     public static Common getCommonConfigInstance(boolean isClientSide) {
-        return isClientSide && !ClientUtil.isLocalServer() ? COMMON_SYNCED_TO_CLIENT : COMMON_FROM_FILE;
+        return isClientSide && !isLocalServerClient() ? COMMON_SYNCED_TO_CLIENT : COMMON_FROM_FILE;
     }
     
     @SubscribeEvent
-    public static void onConfigLoad(ModConfig.ModConfigEvent event) {
+    public static void onConfigLoad(ModConfigEvent.Loading event) {
         ModConfig config = event.getConfig();
-        if (JojoMod.MOD_ID.equals(config.getModId()) && config.getType() == ModConfig.Type.COMMON) {
+        if (MOD_ID.equals(config.getModId()) && config.getType() == ModConfig.Type.COMMON) {
             COMMON_FROM_FILE.onLoadOrReload();
         }
     }
     
     @SubscribeEvent
-    public static void onConfigReload(ModConfig.Reloading event) {
+    public static void onConfigReload(ModConfigEvent.Reloading event) {
         ModConfig config = event.getConfig();
-        if (JojoMod.MOD_ID.equals(config.getModId()) && config.getType() == ModConfig.Type.COMMON) {
+        if (MOD_ID.equals(config.getModId()) && config.getType() == ModConfig.Type.COMMON) {
             // FIXME sync the config to all players on the server
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
@@ -683,6 +800,29 @@ public class JojoModConfig {
                     Common.SyncedValues.syncWithClient(player);
                 });
             }
+        }
+    }
+
+    private static List<ResourceLocation> readResourceLocationList(FriendlyByteBuf buf) {
+        int size = buf.readVarInt();
+        return IntStream.range(0, size)
+                .mapToObj(i -> ResourceLocation.tryParse(buf.readUtf()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+    
+    private static void writeResourceLocationList(FriendlyByteBuf buf, List<ResourceLocation> values) {
+        buf.writeVarInt(values.size());
+        values.forEach(resLoc -> buf.writeUtf(resLoc.toString()));
+    }
+
+    private static boolean isLocalServerClient() {
+        try {
+            Class<?> clientUtil = Class.forName("com.github.standobyte.jojo.client.ClientUtil");
+            return (boolean) clientUtil.getMethod("isLocalServer").invoke(null);
+        }
+        catch (ReflectiveOperationException e) {
+            return false;
         }
     }
 }

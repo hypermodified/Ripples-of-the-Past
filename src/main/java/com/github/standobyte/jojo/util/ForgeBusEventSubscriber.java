@@ -122,6 +122,10 @@ public class ForgeBusEventSubscriber {
     public static final ResourceLocation MR_PRESIDENT_CAP = new ResourceLocation(JojoMod.MOD_ID, "mr_president");
     public static final ResourceLocation CHUNK_UTIL_CAP = new ResourceLocation(JojoMod.MOD_ID, "chunk_util");
     public static final ResourceLocation ITEM_TRACK_CAP = new ResourceLocation(JojoMod.MOD_ID, "item_track");
+
+    private static boolean enableNonStandPowers() {
+        return JojoModConfig.getCommonConfigInstance(false).enableNonStandPowers.get();
+    }
     
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
@@ -132,11 +136,13 @@ public class ForgeBusEventSubscriber {
         JojoPowerCommand.register(dispatcher);
         JojoEnergyCommand.register(dispatcher);
         JojoControlsCommand.register(dispatcher);
-        HamonStatCommand.register(dispatcher);
         RockPaperScissorsCommand.register(dispatcher);
         ConfigPackCommand.register(dispatcher);
         JojoCommandsCommand.register(dispatcher);
-        PillarmanModeCommand.register(dispatcher);
+        if (enableNonStandPowers()) {
+            HamonStatCommand.register(dispatcher);
+            PillarmanModeCommand.register(dispatcher);
+        }
     }
     
     
@@ -170,7 +176,9 @@ public class ForgeBusEventSubscriber {
             if (entity instanceof PlayerEntity) {
                 PlayerEntity player = (PlayerEntity) living;
                 event.addCapability(STAND_CAP, new StandCapProvider(player));
-                event.addCapability(NON_STAND_CAP, new NonStandCapProvider(player));
+                if (enableNonStandPowers()) {
+                    event.addCapability(NON_STAND_CAP, new NonStandCapProvider(player));
+                }
                 event.addCapability(PLAYER_UTIL_CAP, new PlayerUtilCapProvider(player));
                 if (player.level.isClientSide()) {
                     event.addCapability(CLIENT_PLAYER_UTIL_CAP, new ClientPlayerUtilCapProvider(player));
@@ -185,10 +193,10 @@ public class ForgeBusEventSubscriber {
                         stand -> stand.getContinuousEffects().onStandUserRemoved(living));
             });
         }
-        if (entity instanceof ProjectileEntity && (HamonUtil.ProjectileChargeProperties.canBeChargedWithHamon(entity))) {
+        if (enableNonStandPowers() && entity instanceof ProjectileEntity && (HamonUtil.ProjectileChargeProperties.canBeChargedWithHamon(entity))) {
             event.addCapability(PROJECTILE_HAMON_CAP, new ProjectileHamonChargeCapProvider(entity));
         }
-        if (entity instanceof LivingEntity || entity instanceof ItemEntity) {
+        if (enableNonStandPowers() && (entity instanceof LivingEntity || entity instanceof ItemEntity)) {
             event.addCapability(ENTITY_HAMON_CHARGE_CAP, new EntityHamonChargeCapProvider(entity));
         }
     }
@@ -200,13 +208,17 @@ public class ForgeBusEventSubscriber {
     
     public static void registerCapabilities() { // moved the registration here just so that it's in the same place as the attachment
         CapabilityManager.INSTANCE.register(IStandPower.class, new StandCapStorage(), () -> new StandPower(null));
-        CapabilityManager.INSTANCE.register(INonStandPower.class, new NonStandCapStorage(), () -> new NonStandPower(null));
+        if (enableNonStandPowers()) {
+            CapabilityManager.INSTANCE.register(INonStandPower.class, new NonStandCapStorage(), () -> new NonStandPower(null));
+        }
         CapabilityManager.INSTANCE.register(PlayerUtilCap.class, new PlayerUtilCapStorage(), () -> new PlayerUtilCap(null));
         CapabilityManager.INSTANCE.register(ClientPlayerUtilCap.class, JojoModUtil.noStorage(), () -> new ClientPlayerUtilCap(null));
         CapabilityManager.INSTANCE.register(LivingUtilCap.class, new LivingUtilCapStorage(), () -> new LivingUtilCap(null));
         CapabilityManager.INSTANCE.register(EntityUtilCap.class, new EntityUtilCapStorage(), () -> new EntityUtilCap(null));
-        CapabilityManager.INSTANCE.register(EntityHamonChargeCap.class, new EntityHamonChargeCapStorage(), () -> new EntityHamonChargeCap(null));
-        CapabilityManager.INSTANCE.register(ProjectileHamonChargeCap.class, new ProjectileHamonChargeCapStorage(), () -> new ProjectileHamonChargeCap(null));
+        if (enableNonStandPowers()) {
+            CapabilityManager.INSTANCE.register(EntityHamonChargeCap.class, new EntityHamonChargeCapStorage(), () -> new EntityHamonChargeCap(null));
+            CapabilityManager.INSTANCE.register(ProjectileHamonChargeCap.class, new ProjectileHamonChargeCapStorage(), () -> new ProjectileHamonChargeCap(null));
+        }
         CapabilityManager.INSTANCE.register(MerchantData.class, JojoModUtil.makeSerializableStorage(), () -> new MerchantData(null, null));
         
         CapabilityManager.INSTANCE.register(WorldUtilCap.class, new WorldUtilCapStorage(), () -> new WorldUtilCap(null));

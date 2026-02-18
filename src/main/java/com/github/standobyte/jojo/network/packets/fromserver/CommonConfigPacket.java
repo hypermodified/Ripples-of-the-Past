@@ -5,8 +5,7 @@ import java.util.function.Supplier;
 import com.github.standobyte.jojo.JojoModConfig;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
 
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
 
 public class CommonConfigPacket {
     private final JojoModConfig.Common.SyncedValues values;
@@ -20,17 +19,17 @@ public class CommonConfigPacket {
     public static class Handler implements IModPacketHandler<CommonConfigPacket> {
         
         @Override
-        public void encode(CommonConfigPacket msg, PacketBuffer buf) {
+        public void encode(CommonConfigPacket msg, FriendlyByteBuf buf) {
             msg.values.writeToBuf(buf);
         }
 
         @Override
-        public CommonConfigPacket decode(PacketBuffer buf) {
+        public CommonConfigPacket decode(FriendlyByteBuf buf) {
             return new CommonConfigPacket(new JojoModConfig.Common.SyncedValues(buf));
         }
 
         @Override
-        public void handle(CommonConfigPacket msg, Supplier<NetworkEvent.Context> ctx) {
+        public void handle(CommonConfigPacket msg, Supplier<?> ctx) {
             msg.values.changeConfigValues();
         }
 

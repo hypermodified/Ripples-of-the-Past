@@ -6,14 +6,13 @@ buildscript {
         maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
-        classpath 'org.parchmentmc:librarian:1.+'
-        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: project.property("forgegradle_version").toString(), changing: true
+        classpath "org.parchmentmc:librarian:${project.property('librarian_version')}"
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: project.property("mixingradle_version").toString()
+        classpath "${project.property('shadow_group')}:shadow:${project.property('shadow_version')}"
     }
 }
-plugins {
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
-}
+apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.parchmentmc.librarian.forgegradle'
 apply plugin: 'eclipse'
@@ -24,11 +23,19 @@ version = release_snapshot.toBoolean() ? "${mc_version}-${mod_version}-snapshot-
 group = 'standobyte.jojo'
 archivesBaseName = 'JJBA-RipplesOfThePast'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+java.toolchain.languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.property("java_lang_version").toString()))
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+boolean useLegacyMixinRemap = project.property("use_legacy_mixin_remap").toString().toBoolean()
+boolean enableLegacyReobfPipeline = project.property("enable_legacy_reobf_pipeline").toString().toBoolean()
+String mappingsChannel = project.findProperty("mappings_channel")?.toString()?.trim() ?: 'parchment'
+String mappingsVersion = project.findProperty("mappings_version")?.toString()?.trim()
+if (!mappingsVersion) {
+    mappingsVersion = project.property("parchment_version").toString()
+}
+
 minecraft {
-    mappings channel: 'parchment', version: "2022.03.06-1.16.5"
+    mappings channel: mappingsChannel, version: mappingsVersion
     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
     runs {
@@ -36,8 +43,10 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            if (useLegacyMixinRemap) {
+                property 'mixin.env.remapRefMap', 'true'
+                property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            }
             mods {
                 jojo {
                     source sourceSets.main
@@ -49,8 +58,10 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            if (useLegacyMixinRemap) {
+                property 'mixin.env.remapRefMap', 'true'
+                property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            }
             mods {
                 jojo {
                     source sourceSets.main
@@ -62,7 +73,7 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            args '--mod', 'examplemod', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            args '--mod', project.property('mod_id').toString(), '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
             mods {
                 jojo {
                     source sourceSets.main
@@ -73,6 +84,30 @@ minecraft {
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+
+String portSourceIncludesRaw = project.findProperty("port_source_includes")?.toString()?.trim()
+if (portSourceIncludesRaw) {
+    List<String> portSourceIncludePatterns = portSourceIncludesRaw.split(';')
+            .collect { it.trim() }
+            .findAll { !it.isEmpty() }
+    if (!portSourceIncludePatterns.isEmpty()) {
+        sourceSets.main.java.setIncludes(portSourceIncludePatterns)
+        logger.lifecycle("Applying staged port source includes ({} patterns)", portSourceIncludePatterns.size())
+    }
+}
+
+String portSourceExcludesRaw = project.findProperty("port_source_excludes")?.toString()?.trim()
+if (portSourceExcludesRaw) {
+    List<String> portSourceExcludePatterns = portSourceExcludesRaw.split(';')
+            .collect { it.trim() }
+            .findAll { !it.isEmpty() }
+    if (!portSourceExcludePatterns.isEmpty()) {
+        sourceSets.main.java.exclude(portSourceExcludePatterns)
+        logger.lifecycle("Applying staged port source excludes ({} patterns)", portSourceExcludePatterns.size())
+    }
+}
+
 
 mixin {
     add sourceSets.main, 'mixins.jojo.refmap.json'
@@ -119,18 +154,19 @@ configurations {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${mc_version}-${forge_version}"
-    annotationProcessor 'org.spongepowered:mixin:0.8.4:processor'
-
-    implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:${playeranim_version}")
-    implementation fg.deobf("io.github.kosmx.bendy-lib:bendy-lib-forge:${bendylib_version}")
+    annotationProcessor "org.spongepowered:mixin:${project.property('mixin_version')}:processor"
     compileOnly 'org.jetbrains:annotations:23.0.0'
-    
-    compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}")
-    
-    compileOnly fg.deobf("de.teamlapen.vampirism:Vampirism:${mc_version}-${vampirism_version}")
-    
-    compileOnly fg.deobf("be.florens:expandability-forge:${expandability_version}")
-    
+
+    boolean enableOptionalModDeps = project.property("enable_optional_mod_deps").toString().toBoolean()
+    if (enableOptionalModDeps) {
+        implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:${playeranim_version}")
+        implementation fg.deobf("io.github.kosmx.bendy-lib:bendy-lib-forge:${bendylib_version}")
+
+        compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}")
+        compileOnly fg.deobf("de.teamlapen.vampirism:Vampirism:${mc_version}-${vampirism_version}")
+        compileOnly fg.deobf("be.florens:expandability-forge:${expandability_version}")
+    }
+
     shade 'team.unnamed:mocha:3.0.1'
 }
 
@@ -138,9 +174,24 @@ dependencies {
 // Minifies json resource files
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
+import org.apache.tools.ant.filters.ReplaceTokens
 
 processResources {
 	inputs.property "version", project.version
+    inputs.property "loader_version_range", project.property("loader_version_range")
+    inputs.property "forge_version_range", project.property("forge_version_range")
+    inputs.property "playeranim_version_range", project.property("playeranim_version_range")
+    inputs.property "bendylib_version_range", project.property("bendylib_version_range")
+    inputs.property "update_json_url", project.property("update_json_url")
+
+    filesMatching("META-INF/mods.toml") {
+        filter(ReplaceTokens, tokens: [
+                loader_version_range: project.property("loader_version_range").toString(),
+                forge_version_range: project.property("forge_version_range").toString(),
+                playeranim_version_range: project.property("playeranim_version_range").toString(),
+                bendylib_version_range: project.property("bendylib_version_range").toString(),
+                update_json_url: project.property("update_json_url").toString()])
+    }
 
     doLast {
         fileTree(dir: outputs.files.asPath, include: "**/*.json").each {
@@ -169,28 +220,45 @@ shadowJar {
     configurations = [project.configurations.shade]
     relocate 'team.unnamed.mocha', "dependency.${project.group}.mocha"
     exclude 'javassist*'
-    finalizedBy 'reobfShadowJar'
 }
 
-assemble.dependsOn shadowJar
+if (enableLegacyReobfPipeline) {
+    shadowJar.finalizedBy 'reobfShadowJar'
+    assemble.dependsOn shadowJar
 
-reobf {
-    shadowJar {}
+    reobf {
+        shadowJar {}
+    }
+
+    // Example configuration to allow publishing using the maven-publish task
+    // This is the preferred method to reobfuscate your jar file
+    jar.finalizedBy('reobfJar')
+    // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
+    //publish.dependsOn('reobfJar')
 }
-
-// Example configuration to allow publishing using the maven-publish task
-// This is the preferred method to reobfuscate your jar file
-jar.finalizedBy('reobfJar') 
-// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
-//publish.dependsOn('reobfJar')
+else {
+    logger.lifecycle('Legacy reobf pipeline disabled for migration profile.')
+}
 
 task srcJar (type: Jar) {
     from sourceSets.main.java
-    classifier = 'sources'
+    archiveClassifier.set('sources')
 }
 
-artifacts {
-    archives srcJar
+if (enableLegacyReobfPipeline) {
+    artifacts {
+        archives srcJar
+    }
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    if (project.hasProperty('javac_maxerrs') && project.property('javac_maxerrs').toString().trim()) {
+        options.compilerArgs += ['-Xmaxerrs', project.property('javac_maxerrs').toString()]
+    }
+    if (project.hasProperty('javac_maxwarns') && project.property('javac_maxwarns').toString().trim()) {
+        options.compilerArgs += ['-Xmaxwarns', project.property('javac_maxwarns').toString()]
+    }
 }
 
 tasks.withType(GenerateModuleMetadata) {

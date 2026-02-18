@@ -39,18 +39,26 @@ public class JojoCustomRegistries {
     
     
     public static void initCustomRegistries(IEventBus modEventBus) {
+        initCustomRegistries(modEventBus, true);
+    }
+
+    public static void initCustomRegistries(IEventBus modEventBus, boolean enableNonStandPowers) {
         ACTIONS.initRegistry(modEventBus);
-        NON_STAND_POWERS.initRegistry(modEventBus);
-        HAMON_SKILLS.initRegistry(modEventBus);
-        HAMON_CHARACTER_TECHNIQUES.initRegistry(modEventBus);
+        if (enableNonStandPowers) {
+            NON_STAND_POWERS.initRegistry(modEventBus);
+            HAMON_SKILLS.initRegistry(modEventBus);
+            HAMON_CHARACTER_TECHNIQUES.initRegistry(modEventBus);
+        }
         STANDS.initRegistry(modEventBus);
         STAND_EFFECTS.initRegistry(modEventBus);
         
         // just for the sake of splitting the actions to different files
         // otherwise the classes with just RegistryObject instances won't load in time
-        ModHamonActions.loadRegistryObjects();
-        ModVampirismActions.loadRegistryObjects();
-        ModZombieActions.loadRegistryObjects();
-        ModPillarmanActions.loadRegistryObjects();
+        if (enableNonStandPowers) {
+            ModHamonActions.loadRegistryObjects();
+            ModVampirismActions.loadRegistryObjects();
+            ModZombieActions.loadRegistryObjects();
+            ModPillarmanActions.loadRegistryObjects();
+        }
     }
 }

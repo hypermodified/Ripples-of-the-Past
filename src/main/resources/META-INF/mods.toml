@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[36,)"
+loaderVersion="@loader_version_range@"
 license="GNU GPL v3.0"
 issueTrackerURL="https://github.com/StandoByte/Ripples-of-the-Past/issues"
 
@@ -7,7 +7,7 @@ issueTrackerURL="https://github.com/StandoByte/Ripples-of-the-Past/issues"
     modId="jojo"
     version="${file.jarVersion}"
     displayName="Ripples of the Past"
-    updateJSONURL="https://raw.githubusercontent.com/StandoByte/Ripples-of-the-Past/1.16.5-0.2.2/update.json"
+    updateJSONURL="@update_json_url@"
     displayURL=''' 
 https://curseforge.com/minecraft/mc-mods/ripples-of-the-past/
 https://modrinth.com/mod/ripples-of-the-past
@@ -59,20 +59,20 @@ https://modrinth.com/mod/ripples-of-the-past
 [[dependencies.jojo]]
     modId="forge"
     mandatory=true
-    versionRange="[36.2.20,)"
+    versionRange="@forge_version_range@"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.jojo]]
     modId="playeranimator"
     mandatory=false
-    versionRange="[0.4.0+1.16.5]"
+    versionRange="@playeranim_version_range@"
     ordering="NONE"
     side="CLIENT"
 
 [[dependencies.jojo]]
     modId="bendylib"
     mandatory=false
-    versionRange="[1.2.1,)"
+    versionRange="@bendylib_version_range@"
     ordering="NONE"
     side="CLIENT"
