@@ -6,6 +6,8 @@ import com.github.standobyte.jojo.action.Action;
 import com.github.standobyte.jojo.action.ActionTarget;
 import com.github.standobyte.jojo.init.power.JojoCustomRegistries;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketBufferUtil;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.IPower;
 import com.github.standobyte.jojo.power.IPower.PowerClassification;
 import com.github.standobyte.jojo.util.mod.JojoModUtil;
@@ -51,15 +53,15 @@ public class ClClickActionPacket {
             boolean sneak = buf.readBoolean();
             
             ClClickActionPacket packet = new ClClickActionPacket(power, action, target, sneak);
-            packet.extraInputData = buf;
+            packet.extraInputData = PacketBufferUtil.copyReadableBytes(buf);
             return packet;
         }
 
         @Override
         public void handle(ClClickActionPacket msg, Supplier<NetworkEvent.Context> ctx) {
             if (msg.action == null) return;
-            PlayerEntity player = ctx.get().getSender();
-            if (JojoModUtil.tmpSpectatorCantUsePowers(player) || !player.isAlive()) return;
+            PlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null || JojoModUtil.tmpSpectatorCantUsePowers(player) || !player.isAlive()) return;
             
             IPower.getPowerOptional(player, msg.power).ifPresent(power -> {
                 msg.target.resolveEntityId(player.level);
