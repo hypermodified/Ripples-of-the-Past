@@ -14,6 +14,8 @@ Expected output file:
 
 - `build/libs/JJBA-RipplesOfThePast-1.16.5-0.2.2.2-no-gecko.jar`
 
+> Note: the local runner now fails fast if `--port-1201-*` is used while Gradle still targets a non-`1.20.1` `mc_version`. This prevents accidentally testing a jar built against the old 1.16.5 toolchain.
+
 ## 2) Install for local testing
 
 1. Close Minecraft.

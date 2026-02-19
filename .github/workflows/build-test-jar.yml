@@ -2,6 +2,11 @@ name: Build Test JAR
 
 on:
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Branch or tag to build (use work for latest porting fixes)'
+        required: false
+        default: 'work'
   push:
     branches:
       - work
@@ -20,6 +25,16 @@ jobs:
     timeout-minutes: 40
 
     steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_ref || github.ref }}
+
+      - name: Guard against wrong branch for manual runs
+        if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.target_ref == '' || github.event.inputs.target_ref == 'main' || github.event.inputs.target_ref == 'master') }}
+        run: |
+          echo "::error::This workflow is intended for the porting branch. Re-run with target_ref=work."
+          exit 1
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -44,6 +59,37 @@ jobs:
           chmod +x gradlew scripts/run-local-checks.sh
           PORT_BUILD_JAR_TIMEOUT_SECONDS=1800 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-packet-manager-slice.properties
 
+      - name: Verify built JAR contains updated playeranimator dependency range
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar_path="$(ls build/libs/*.jar | head -n1)"
+          unzip -p "$jar_path" META-INF/mods.toml > /tmp/mods.toml.from.jar
+          echo "Built jar: $jar_path"
+          echo "--- Extracted playeranimator dependency block ---"
+          awk '/\[\[dependencies\.jojo\]\]/{flag=1} flag{print} /side="CLIENT"/{if(flag){print ""; flag=0}}' /tmp/mods.toml.from.jar | sed -n '1,20p'
+          if ! grep -q 'modId="playeranimator"' /tmp/mods.toml.from.jar; then
+            echo "::error::playeranimator dependency block missing from built jar mods.toml"
+            exit 1
+          fi
+          if ! grep -q 'versionRange="[0,)"' /tmp/mods.toml.from.jar; then
+            echo "::error::Built jar does not contain expected relaxed playeranimator range [0,)"
+            exit 1
+          fi
+          {
+            echo "ref=${GITHUB_REF}"
+            echo "sha=${GITHUB_SHA}"
+            echo "jar=$jar_path"
+            echo "playeranimator_range=[0,)"
+          } > build/libs/build-metadata.txt
+
+      - name: Upload test JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ripples-test-jar-${{ github.sha }}
+          path: |
+            build/libs/*.jar
+            build/libs/build-metadata.txt
       - name: Upload test JAR artifact
         uses: actions/upload-artifact@v4
         with:

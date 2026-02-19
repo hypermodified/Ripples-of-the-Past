@@ -85,6 +85,40 @@ for gradle_arg in "${PROFILE_GRADLE_ARGS[@]}"; do
   PROFILE_SYS_PROPS+=("-D${gradle_arg#-P}")
 done
 
+
+resolve_effective_mc_version() {
+  local version=""
+  if [[ -f "$ROOT_DIR/gradle.properties" ]]; then
+    version="$(sed -n 's/^mc_version[[:space:]]*=[[:space:]]*//p' "$ROOT_DIR/gradle.properties" | head -n1 | tr -d '\r')"
+  fi
+
+  while IFS='=' read -r key value; do
+    key="${key%%[[:space:]]*}"
+    [[ -z "$key" ]] && continue
+    [[ "$key" =~ ^# ]] && continue
+    value="${value#${value%%[![:space:]]*}}"
+    value="${value%${value##*[![:space:]]}}"
+    if [[ "$key" == "mc_version" ]]; then
+      version="$value"
+    fi
+  done < "$PROFILE_PATH"
+
+  echo "$version"
+}
+
+ensure_port_1201_target() {
+  local mc_version
+  mc_version="$(resolve_effective_mc_version)"
+  if [[ "$mc_version" != "1.20.1" ]]; then
+    echo "[run-local-checks] ERROR: requested --port-1201-* mode but effective mc_version is '${mc_version:-unset}'." >&2
+    echo "[run-local-checks] This build currently targets a different Minecraft version and will produce a non-1.20.1 jar." >&2
+    echo "[run-local-checks] Fix the Gradle/mappings toolchain to 1.20.1 before using port-1201 checks for runtime testing." >&2
+    exit 1
+  fi
+}
+
+ensure_port_1201_target
+
 select_compatible_java() {
   local current_major
   current_major="$(java -version 2>&1 | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p')"
