@@ -2,11 +2,6 @@ name: Build Test JAR
 
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: 'Branch or tag to build (use work for latest porting fixes)'
-        required: false
-        default: 'work'
   push:
     branches:
       - work
@@ -25,17 +20,18 @@ jobs:
     timeout-minutes: 40
 
     steps:
-      - name: Checkout selected ref
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.target_ref || github.ref }}
-
-      - name: Guard against wrong branch for manual runs
-        if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.target_ref == '' || github.event.inputs.target_ref == 'main' || github.event.inputs.target_ref == 'master') }}
+      - name: Print selected ref
+        shell: bash
         run: |
-          echo "::error::This workflow is intended for the porting branch. Re-run with target_ref=work."
-          exit 1
-      - name: Checkout
+          echo "event=${GITHUB_EVENT_NAME}"
+          echo "ref=${GITHUB_REF}"
+          echo "ref_name=${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_NAME}" != "work" ]]; then
+            echo "::error::Run this workflow from branch 'work' (current ref: ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
+      - name: Checkout triggering ref
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -65,9 +61,6 @@ jobs:
           set -euo pipefail
           jar_path="$(ls build/libs/*.jar | head -n1)"
           unzip -p "$jar_path" META-INF/mods.toml > /tmp/mods.toml.from.jar
-          echo "Built jar: $jar_path"
-          echo "--- Extracted playeranimator dependency block ---"
-          awk '/\[\[dependencies\.jojo\]\]/{flag=1} flag{print} /side="CLIENT"/{if(flag){print ""; flag=0}}' /tmp/mods.toml.from.jar | sed -n '1,20p'
           if ! grep -q 'modId="playeranimator"' /tmp/mods.toml.from.jar; then
             echo "::error::playeranimator dependency block missing from built jar mods.toml"
             exit 1
@@ -90,9 +83,4 @@ jobs:
           path: |
             build/libs/*.jar
             build/libs/build-metadata.txt
-      - name: Upload test JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ripples-test-jar
-          path: build/libs/*.jar
           if-no-files-found: error
