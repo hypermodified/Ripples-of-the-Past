@@ -20,19 +20,18 @@ jobs:
     timeout-minutes: 40
 
     steps:
-      - name: Print selected ref
+      - name: Print dispatch context
         shell: bash
         run: |
           echo "event=${GITHUB_EVENT_NAME}"
           echo "ref=${GITHUB_REF}"
           echo "ref_name=${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_REF_NAME}" != "work" ]]; then
-            echo "::error::Run this workflow from branch 'work' (current ref: ${GITHUB_REF_NAME})."
-            exit 1
-          fi
+          echo "Workflow always checks out branch: work"
 
-      - name: Checkout triggering ref
+      - name: Checkout porting branch (work)
         uses: actions/checkout@v4
+        with:
+          ref: work
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
