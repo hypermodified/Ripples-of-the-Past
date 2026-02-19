@@ -61,3 +61,18 @@ If anything fails, report:
 4. Last ~30 lines of log around the error (client and/or server).
 
 This is enough to quickly isolate the next porting fix.
+
+
+## 7) Quick troubleshooting before reporting
+
+- [ ] If startup fails with `jojo only supports playeranimator ... 0.4.0+1.16.5`, you are using an **older jar build**. Replace it with a newly built/downloaded jar from the latest `work` branch commits.
+- [ ] Keep only one `JJBA-RipplesOfThePast-*.jar` in the `mods` folder to avoid loading a stale file by accident.
+- [ ] If the game still refuses to load, attach both `latest.log` and the crash report file from `crash-reports/`.
+
+## 8) If Codex web only shows "Copy patch" / "Copy git apply"
+
+If your Codex UI does not expose a PR creation button, this is expected on some deployments. You can still proceed by:
+
+1. Asking Codex to keep committing fixes on branch `work`.
+2. Opening GitHub in browser and creating the PR from `work` to your target base branch manually.
+3. If needed, use the copied patch as fallback, but branch-based PR is preferred for full history.
