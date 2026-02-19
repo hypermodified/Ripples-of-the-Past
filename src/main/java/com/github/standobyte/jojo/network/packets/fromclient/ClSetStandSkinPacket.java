@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import com.github.standobyte.jojo.JojoMod;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.network.NetworkUtil;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 
 import io.netty.buffer.Unpooled;
@@ -45,7 +47,10 @@ public class ClSetStandSkinPacket {
 
         @Override
         public void handle(ClSetStandSkinPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) {
+                return;
+            }
             IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                 if (power.hasPower() && msg.standId.equals(power.getType().getRegistryName())) {
                     power.getStandInstance().ifPresent(stand -> {
@@ -71,7 +76,9 @@ public class ClSetStandSkinPacket {
                                     try {
                                         entityDataPacket.read(data);
                                         player.connection.send(entityDataPacket);
-                                    } catch (IOException e) {}
+                                    } catch (IOException e) {
+                                        JojoMod.getLogger().error("Failed to sync stand skin metadata packet for {}", player.getGameProfile().getName(), e);
+                                    }
                                 }
                             }
                         }
