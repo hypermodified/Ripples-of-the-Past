@@ -1,49 +1,46 @@
 # Build Test JAR Workflow (Step-by-Step)
 
-This is a click-by-click guide to run the updated GitHub workflow and download the correct artifact.
+Use this exact flow to avoid branch mixups and stale-run issues.
 
-## 1) Open the right repository and branch context
-1. Open your GitHub repo page.
-2. Confirm you are in **hypermodified/Ripples-of-the-Past**.
-3. (Optional but recommended) switch branch selector to **work** before starting.
+## 1) Open the correct workflow
+1. Open GitHub repo: `hypermodified/Ripples-of-the-Past`.
+2. Go to **Actions**.
+3. Click **Build Test JAR (Clean)**.
 
-## 2) Start a brand-new run (do not re-run old failed jobs)
-1. Click **Actions**.
-2. Click **Build Test JAR** in the left sidebar.
-3. Click **Run workflow** (top-right).
-4. In the branch dropdown, choose **work**.
-5. Click the green **Run workflow** button.
+## 2) Start a fresh run on the correct branch
+1. Click **Run workflow**.
+2. In branch dropdown, choose **work**.
+3. Click green **Run workflow**.
 
-## 3) Verify the run is actually using the right branch
-1. Open the new run you just started.
-2. Open the first job logs and check these lines:
-   - `Print dispatch context`
-   - `Workflow always checks out branch: work`
-3. Open `Checkout porting branch (work)` and confirm it succeeded.
+> Important: do not rely on **Re-run jobs** from an older failed run.
+
+## 3) Confirm branch correctness in logs
+1. Open the run.
+2. In **Print dispatch context**, verify:
+   - `ref_name=work`
+3. Ensure **Fail fast unless running from work branch** is skipped or passes.
+
+If that step fails, you launched from the wrong branch. Start a new run and select `work`.
 
 ## 4) Wait for completion and download artifact
-1. Wait until the run is green (success).
-2. Scroll to the **Artifacts** section.
-3. Download `ripples-test-jar-<commit sha>`.
-4. Unzip it.
+1. Wait until run is green.
+2. Download artifact: `ripples-test-jar-<sha>`.
+3. Unzip artifact.
 
-## 5) Install cleanly in Modrinth profile
-1. Remove old JJBA jar(s) from your profile `mods` folder.
-2. Copy the **newly downloaded** JJBA jar from the artifact into `mods`.
-3. Keep only one JJBA jar at a time.
+## 5) Install jar safely
+1. Remove old JJBA jars from profile `mods` folder.
+2. Copy only the new JJBA jar from the downloaded artifact.
+3. Keep one JJBA jar at a time.
 
-## 6) Quick sanity check before launch
-1. Open `build-metadata.txt` from the artifact zip.
+## 6) Validate artifact before launch
+1. Open `build-metadata.txt` from artifact.
 2. Confirm:
-   - `playeranimator_range=[0,)`
-   - `sha=` matches the run you downloaded.
+   - `sha=` equals run commit SHA.
+   - `playeranimator_range=[0,)`.
 
-## 7) Launch test profile
-1. Start Forge **1.20.1** profile.
+## 7) Launch test
+1. Launch Forge **1.20.1** profile.
 2. If it fails, send:
    - `latest.log`
-   - crash report file
-   - `build-metadata.txt` from the artifact used
-
-## Common mistake to avoid
-- Do **not** press **Re-run jobs** on an old failed run and assume it's equivalent to a fresh run.
+   - crash report
+   - `build-metadata.txt`

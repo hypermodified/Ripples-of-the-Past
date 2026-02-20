@@ -1,4 +1,4 @@
-name: Build Test JAR
+name: Build Test JAR (Clean)
 
 on:
   workflow_dispatch:
@@ -17,7 +17,9 @@ on:
 jobs:
   build-test-jar:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
+    permissions:
+      contents: read
 
     steps:
       - name: Print dispatch context
@@ -26,12 +28,20 @@ jobs:
           echo "event=${GITHUB_EVENT_NAME}"
           echo "ref=${GITHUB_REF}"
           echo "ref_name=${GITHUB_REF_NAME}"
-          echo "Workflow always checks out branch: work"
 
-      - name: Checkout porting branch (work)
+      - name: Fail fast unless running from work branch
+        if: ${{ github.ref_name != 'work' }}
+        shell: bash
+        run: |
+          echo "::error::This workflow must be run from branch 'work'."
+          echo "::error::You ran from '${GITHUB_REF_NAME}'."
+          echo "::error::In Actions -> Build Test JAR (Clean), click Run workflow and select branch 'work'."
+          exit 1
+
+      - name: Checkout current ref (no custom refspec)
         uses: actions/checkout@v4
         with:
-          ref: work
+          fetch-depth: 1
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -50,28 +60,31 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build test JAR (minimal packet-manager profile)
+        shell: bash
         run: |
           chmod +x gradlew scripts/run-local-checks.sh
           PORT_BUILD_JAR_TIMEOUT_SECONDS=1800 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-packet-manager-slice.properties
 
-      - name: Verify built JAR contains updated playeranimator dependency range
+      - name: Verify built JAR metadata
         shell: bash
         run: |
           set -euo pipefail
           jar_path="$(ls build/libs/*.jar | head -n1)"
           unzip -p "$jar_path" META-INF/mods.toml > /tmp/mods.toml.from.jar
-          if ! grep -q 'modId="playeranimator"' /tmp/mods.toml.from.jar; then
+
+          if ! grep -Fq 'modId="playeranimator"' /tmp/mods.toml.from.jar; then
             echo "::error::playeranimator dependency block missing from built jar mods.toml"
             exit 1
           fi
-          if ! grep -q 'versionRange="[0,)"' /tmp/mods.toml.from.jar; then
-            echo "::error::Built jar does not contain expected relaxed playeranimator range [0,)"
+          if ! grep -Fq 'versionRange="[0,)"' /tmp/mods.toml.from.jar; then
+            echo "::error::Built jar missing expected playeranimator range [0,)"
             exit 1
           fi
+
           {
             echo "ref=${GITHUB_REF}"
             echo "sha=${GITHUB_SHA}"
-            echo "jar=$jar_path"
+            echo "jar=${jar_path}"
             echo "playeranimator_range=[0,)"
           } > build/libs/build-metadata.txt
 
