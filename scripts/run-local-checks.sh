@@ -171,11 +171,14 @@ run_gradle_with_retry() {
 
   if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\\.minecraftforge\\.installertools\\.ConsoleTool|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
     echo "[run-local-checks] detected corrupted ForgeGradle cache artifacts; clearing cache and retrying once"
-    clear_forge_gradle_caches
-    if timeout "${TIMEOUT_SECONDS}"s ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}"; then
-      rm -f "$log_file"
-      return 0
-    fi
+  else
+    echo "[run-local-checks] first Gradle invocation failed; performing one cache-clean retry in case of transient runner corruption"
+  fi
+
+  clear_forge_gradle_caches
+  if timeout "${TIMEOUT_SECONDS}"s ./gradlew --refresh-dependencies --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}"; then
+    rm -f "$log_file"
+    return 0
   fi
 
   rm -f "$log_file"
