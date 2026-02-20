@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - work
+      - 1.16.5
     paths:
       - 'src/**'
       - 'build.gradle'
@@ -29,13 +29,13 @@ jobs:
           echo "ref=${GITHUB_REF}"
           echo "ref_name=${GITHUB_REF_NAME}"
 
-      - name: Fail fast unless running from work branch
-        if: ${{ github.ref_name != 'work' }}
+      - name: Fail fast unless running from 1.16.5 branch
+        if: ${{ github.ref_name != '1.16.5' }}
         shell: bash
         run: |
-          echo "::error::This workflow must be run from branch 'work'."
+          echo "::error::This workflow must be run from branch '1.16.5'."
           echo "::error::You ran from '${GITHUB_REF_NAME}'."
-          echo "::error::In Actions -> Build Test JAR (Clean), click Run workflow and select branch 'work'."
+          echo "::error::In Actions -> Build Test JAR (Clean), click Run workflow and select branch '1.16.5'."
           exit 1
 
       - name: Checkout current ref (no custom refspec)

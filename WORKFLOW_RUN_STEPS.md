@@ -9,7 +9,7 @@ Use this exact flow to avoid branch mixups and stale-run issues.
 
 ## 2) Start a fresh run on the correct branch
 1. Click **Run workflow**.
-2. In branch dropdown, choose **work**.
+2. In branch dropdown, choose **1.16.5**.
 3. Click green **Run workflow**.
 
 > Important: do not rely on **Re-run jobs** from an older failed run.
@@ -17,10 +17,10 @@ Use this exact flow to avoid branch mixups and stale-run issues.
 ## 3) Confirm branch correctness in logs
 1. Open the run.
 2. In **Print dispatch context**, verify:
-   - `ref_name=work`
-3. Ensure **Fail fast unless running from work branch** is skipped or passes.
+   - `ref_name=1.16.5`
+3. Ensure **Fail fast unless running from 1.16.5 branch** is skipped or passes.
 
-If that step fails, you launched from the wrong branch. Start a new run and select `work`.
+If that step fails, you launched from the wrong branch. Start a new run and select `1.16.5`.
 
 ## 4) Wait for completion and download artifact
 1. Wait until run is green.
