@@ -45,3 +45,9 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
    - `latest.log`
    - crash report
    - `build-metadata.txt`
+
+
+## 8) If CI fails with ForgeGradle cache corruption
+- Symptom examples: `Unexpected end of ZLIB input stream` or `Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool`.
+- The workflow now pre-cleans known ForgeGradle cache paths and the local script retries once after cleanup.
+- If you still see it, run the workflow again as a **new run** (not Re-run).

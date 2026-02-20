@@ -147,6 +147,8 @@ import shutil
 
 paths = [
     os.path.expanduser('~/.gradle/caches/forge_gradle'),
+    os.path.expanduser('~/.gradle/caches/modules-2/files-2.1/net.minecraftforge/installertools'),
+    os.path.expanduser('~/.gradle/caches/modules-2/files-2.1/net/minecraftforge/installertools'),
     'build/fg_cache',
     'build/createMcpToSrg',
     'build/extractSrg',
@@ -167,7 +169,7 @@ run_gradle_with_retry() {
     return 0
   fi
 
-  if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
+  if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\\.minecraftforge\\.installertools\\.ConsoleTool|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
     echo "[run-local-checks] detected corrupted ForgeGradle cache artifacts; clearing cache and retrying once"
     clear_forge_gradle_caches
     if timeout "${TIMEOUT_SECONDS}"s ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}"; then
