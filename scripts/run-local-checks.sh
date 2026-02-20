@@ -162,9 +162,38 @@ PYTHON
 
 run_gradle_with_retry() {
   local log_file
+  local start_ts
+  local attempt_timeout
+  local heartbeat_pid
+  local gradle_status
   log_file="$(mktemp)"
+  start_ts="$(date +%s)"
 
-  if timeout "${TIMEOUT_SECONDS}"s ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}" 2>&1 | tee "$log_file"; then
+  heartbeat() {
+    local phase="$1"
+    while true; do
+      sleep 30
+      echo "[run-local-checks] still running (${phase}) ... $(date -u +%H:%M:%S UTC)"
+    done
+  }
+
+  run_with_heartbeat() {
+    local phase="$1"
+    shift
+    heartbeat "$phase" &
+    heartbeat_pid=$!
+    set +e
+    timeout "$attempt_timeout"s "$@"
+    gradle_status=$?
+    set -e
+    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    wait "$heartbeat_pid" 2>/dev/null || true
+    return $gradle_status
+  }
+
+  attempt_timeout="$TIMEOUT_SECONDS"
+
+  if run_with_heartbeat "attempt-1" ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}" 2>&1 | tee "$log_file"; then
     rm -f "$log_file"
     return 0
   fi
@@ -176,7 +205,14 @@ run_gradle_with_retry() {
   fi
 
   clear_forge_gradle_caches
-  if timeout "${TIMEOUT_SECONDS}"s ./gradlew --refresh-dependencies --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}"; then
+  attempt_timeout=$(( TIMEOUT_SECONDS - ($(date +%s) - start_ts) ))
+  if (( attempt_timeout <= 0 )); then
+    echo "[run-local-checks] timeout budget exhausted before retry; aborting" >&2
+    rm -f "$log_file"
+    return 1
+  fi
+
+  if run_with_heartbeat "attempt-2" ./gradlew --refresh-dependencies --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}"; then
     rm -f "$log_file"
     return 0
   fi
