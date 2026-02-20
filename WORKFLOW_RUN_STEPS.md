@@ -1,6 +1,6 @@
 # Build Test JAR Workflow (Step-by-Step)
 
-Use this exact flow to avoid branch mixups and stale-run issues.
+Use this exact flow to avoid branch mixups and to force a 1.20.1-targeted build even though the branch is named 1.16.5.
 
 ## 1) Open the correct workflow
 1. Open GitHub repo: `hypermodified/Ripples-of-the-Past`.
@@ -33,6 +33,7 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 3. Keep one JJBA jar at a time.
 
 ## 6) Validate artifact before launch
+(Workflow uses `porting/gradle-1.20.1-ci.properties` to override target mc_version to 1.20.1.)
 1. Open `build-metadata.txt` from artifact.
 2. Confirm:
    - `sha=` equals run commit SHA.

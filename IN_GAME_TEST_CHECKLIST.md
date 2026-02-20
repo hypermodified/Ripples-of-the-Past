@@ -7,12 +7,12 @@ Use this checklist to test the current **1.20.1 stands-focused MVP** build.
 From the repository root:
 
 ```bash
-PORT_BUILD_JAR_TIMEOUT_SECONDS=1200 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-packet-manager-slice.properties
+PORT_BUILD_JAR_TIMEOUT_SECONDS=1200 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
 ```
 
 Expected output file:
 
-- `build/libs/JJBA-RipplesOfThePast-1.16.5-0.2.2.2-no-gecko.jar`
+- `build/libs/JJBA-RipplesOfThePast-1.20.1-0.2.2.2-no-gecko.jar (target name when 1.20.1 profile is effective)`
 
 > Note: the local runner now fails fast if `--port-1201-*` is used while Gradle still targets a non-`1.20.1` `mc_version`. This prevents accidentally testing a jar built against the old 1.16.5 toolchain.
 
@@ -67,7 +67,7 @@ This is enough to quickly isolate the next porting fix.
 
 ## 7) Quick troubleshooting before reporting
 
-- [ ] If startup fails with `jojo only supports playeranimator ... 0.4.0+1.16.5`, you are using an **older jar build**. Replace it with a newly built/downloaded jar from the latest `work` branch commits.
+- [ ] If startup fails with `jojo only supports playeranimator ... 0.4.0+1.16.5`, you are using an **older jar build**. Replace it with a newly built/downloaded jar from the latest `1.16.5` branch commits.
 - [ ] Keep only one `JJBA-RipplesOfThePast-*.jar` in the `mods` folder to avoid loading a stale file by accident.
 - [ ] If the game still refuses to load, attach both `latest.log` and the crash report file from `crash-reports/`.
 
@@ -75,6 +75,6 @@ This is enough to quickly isolate the next porting fix.
 
 If your Codex UI does not expose a PR creation button, this is expected on some deployments. You can still proceed by:
 
-1. Asking Codex to keep committing fixes on branch `work`.
-2. Opening GitHub in browser and creating the PR from `work` to your target base branch manually.
+1. Asking Codex to keep committing fixes on branch `1.16.5`.
+2. Opening GitHub in browser and creating the PR from `1.16.5` to your target base branch manually.
 3. If needed, use the copied patch as fallback, but branch-based PR is preferred for full history.
