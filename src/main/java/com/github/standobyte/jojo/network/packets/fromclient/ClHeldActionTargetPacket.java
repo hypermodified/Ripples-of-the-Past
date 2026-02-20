@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 
 import com.github.standobyte.jojo.action.ActionTarget;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.IPower;
 import com.github.standobyte.jojo.power.IPower.PowerClassification;
 import com.github.standobyte.jojo.util.mod.JojoModUtil;
@@ -93,8 +94,8 @@ public class ClHeldActionTargetPacket {
 
         @Override
         public void handle(ClHeldActionTargetPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            PlayerEntity player = ctx.get().getSender();
-            if (!JojoModUtil.tmpSpectatorCantUsePowers(player)) {
+            PlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player != null && !JojoModUtil.tmpSpectatorCantUsePowers(player)) {
                 IPower.getPowerOptional(player, msg.classification).ifPresent(power -> {
                     ActionTarget target = msg.targetEntityId == -1 ? msg.targetBlock == null ? 
                             ActionTarget.EMPTY
