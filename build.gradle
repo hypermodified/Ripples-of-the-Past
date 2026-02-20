@@ -29,7 +29,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(portingToolchainLanguage
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
 minecraft {
-    mappings channel: 'parchment', version: "2022.03.06-1.16.5"
+    mappings channel: 'parchment', version: "${parchment_version}"
     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
     runs {
@@ -126,11 +126,12 @@ dependencies {
     implementation fg.deobf("io.github.kosmx.bendy-lib:bendy-lib-forge:${bendylib_version}")
     compileOnly 'org.jetbrains:annotations:23.0.0'
     
-    compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}")
-    
-    compileOnly fg.deobf("de.teamlapen.vampirism:Vampirism:${mc_version}-${vampirism_version}")
-    
-    compileOnly fg.deobf("be.florens:expandability-forge:${expandability_version}")
+    def includeLegacyCompatDeps = !mc_version.toString().startsWith('1.20')
+    if (includeLegacyCompatDeps) {
+        compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}")
+        compileOnly fg.deobf("de.teamlapen.vampirism:Vampirism:${mc_version}-${vampirism_version}")
+        compileOnly fg.deobf("be.florens:expandability-forge:${expandability_version}")
+    }
     
     shade 'team.unnamed:mocha:3.0.1'
 }

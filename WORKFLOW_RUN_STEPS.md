@@ -51,3 +51,8 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 - Symptom examples: `Unexpected end of ZLIB input stream` or `Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool`.
 - The workflow now pre-cleans known ForgeGradle cache paths and the local script retries once after cleanup.
 - If you still see it, run the workflow again as a **new run** (not Re-run).
+
+## 9) Why runs can take 20+ minutes before failing
+- ForgeGradle setup for a fresh runner is heavy (MCP/mappings/deobf setup), so logs can be very long before the actual dependency error appears.
+- If you see errors mentioning `mapped_parchment_...1.16.5` while targeting 1.20.1, that indicates mapping-version mismatch during dependency remap.
+- The workflow now uses a dedicated 1.20.1 profile to override `mc_version`, `forge_version`, and `parchment_version` together to avoid that mismatch.
