@@ -3,6 +3,7 @@ package com.github.standobyte.jojo.network.packets.fromclient;
 import java.util.function.Supplier;
 
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -29,7 +30,10 @@ public class ClOnStandDashPacket {
         
         @Override
         public void handle(ClOnStandDashPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) {
+                return;
+            }
             IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                 if (power.canLeap()) {
                     power.onDash();
