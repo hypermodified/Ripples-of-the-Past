@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_VERSION="port-checks-v2-fastfail"
 MODE=""
 PROFILE=""
 
@@ -238,6 +239,6 @@ else
   TIMEOUT_SECONDS="${PORT_BUILD_JAR_TIMEOUT_SECONDS:-1200}"
 fi
 
-echo "[run-local-checks] mode=$MODE profile=$PROFILE timeout=${TIMEOUT_SECONDS}s"
+echo "[run-local-checks] script=$SCRIPT_VERSION mode=$MODE profile=$PROFILE timeout=${TIMEOUT_SECONDS}s"
 set -x
 run_gradle_with_retry

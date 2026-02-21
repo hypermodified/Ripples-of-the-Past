@@ -60,11 +60,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build test JAR (minimal packet-manager profile)
+      - name: Fast-fail compile gate (minimal packet-manager profile)
         shell: bash
         run: |
           chmod +x gradlew scripts/run-local-checks.sh
-          PORT_BUILD_JAR_TIMEOUT_SECONDS=1800 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
+          SMOKE_TIMEOUT_SECONDS=600 bash scripts/run-local-checks.sh --port-1201-smoke --port-profile porting/gradle-1.20.1-ci.properties
+
+      - name: Build test JAR (only after compile gate passes)
+        shell: bash
+        run: |
+          PORT_BUILD_JAR_TIMEOUT_SECONDS=1200 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
 
       - name: Verify built JAR metadata
         shell: bash
