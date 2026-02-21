@@ -61,8 +61,8 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 ## 10) Why this workflow now fails faster
 - It now runs a **Fast-fail compile gate** before the jar step.
 - If compile is broken, the run fails early instead of spending ~20-30 minutes in jar packaging path.
-- In logs, look for `script=port-checks-v2-fastfail` to confirm the latest runner script is in use.
+- In logs, look for `script=port-checks-v3-hardfail-timeout` to confirm the latest runner script is in use.
 
-- Fast-fail compile gate uses a lower timeout and intentionally skips retry in smoke mode (especially when stuck at `listLibraries`) to fail quickly and show signal sooner.
+- Compile gate now runs in diagnostic mode and hard-fails on timeout; it does **not** continue to jar build after a timeout.
 
-- If smoke times out before compile starts, it is treated as **inconclusive** and CI continues to jar build; this avoids false-red failures caused by long ForgeGradle bootstrap (`listLibraries`).
+- If compile gate times out around `listLibraries`, the workflow now fails immediately with a clear timeout message so we can fix the root cause instead of failing later in jar step.

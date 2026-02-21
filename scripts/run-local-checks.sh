@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_VERSION="port-checks-v2-fastfail"
+SCRIPT_VERSION="port-checks-v3-hardfail-timeout"
 MODE=""
 PROFILE=""
 
@@ -202,10 +202,10 @@ run_gradle_with_retry() {
     return 0
   fi
 
-  if [[ "$MODE" == "smoke" && "$first_status" -eq 124 ]]; then
-    echo "[run-local-checks] smoke gate timed out before compile completed (likely ForgeGradle bootstrap/listLibraries); treating as inconclusive and continuing"
+  if [[ "$first_status" -eq 124 ]]; then
+    echo "[run-local-checks] ${MODE} timed out before completion (often during ForgeGradle bootstrap/listLibraries); failing fast instead of retrying" >&2
     rm -f "$log_file"
-    return 0
+    return 124
   fi
 
   if grep -Eq "Execution failed for task ':compileJava'|Compilation failed; see the compiler error output for details" "$log_file"; then
