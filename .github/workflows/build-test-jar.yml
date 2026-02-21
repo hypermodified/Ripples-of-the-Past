@@ -60,16 +60,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Fail-fast compile diagnostic gate (minimal packet-manager profile)
+      - name: Build test JAR (priority path)
         shell: bash
+        env:
+          GRADLE_OPTS: ""
+          HTTP_PROXY: ""
+          HTTPS_PROXY: ""
+          http_proxy: ""
+          https_proxy: ""
         run: |
           chmod +x gradlew scripts/run-local-checks.sh
-          PORT_COMPILE_DIAG_TIMEOUT_SECONDS=300 bash scripts/run-local-checks.sh --port-1201-compile-diagnostic --port-profile porting/gradle-1.20.1-ci.properties
-
-      - name: Build test JAR (only after compile gate passes)
-        shell: bash
-        run: |
-          PORT_BUILD_JAR_TIMEOUT_SECONDS=900 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
+          PORT_BUILD_JAR_TIMEOUT_SECONDS=1800 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
 
       - name: Verify built JAR metadata
         shell: bash

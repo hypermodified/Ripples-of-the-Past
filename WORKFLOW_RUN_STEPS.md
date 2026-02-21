@@ -58,11 +58,9 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 - The workflow now uses a dedicated 1.20.1 profile to override `mc_version`, `forge_version`, and `parchment_version` together to avoid that mismatch.
 
 
-## 10) Why this workflow now fails faster
-- It now runs a **Fast-fail compile gate** before the jar step.
-- If compile is broken, the run fails early instead of spending ~20-30 minutes in jar packaging path.
-- In logs, look for `script=port-checks-v3-hardfail-timeout` to confirm the latest runner script is in use.
+## 10) Priority jar mode
+- Workflow now skips the diagnostic compile gate and goes straight to `--port-1201-build-jar` so artifact generation is not blocked by early timeout at `listLibraries`.
+- Build timeout is set to 1800s to give ForgeGradle bootstrap enough time on slower runners.
+- In logs, confirm `script=port-checks-v4-proxy-sane` to ensure the latest runner script is active.
 
-- Compile gate now runs in diagnostic mode and hard-fails on timeout; it does **not** continue to jar build after a timeout.
-
-- If compile gate times out around `listLibraries`, the workflow now fails immediately with a clear timeout message so we can fix the root cause instead of failing later in jar step.
+- The runner script now auto-unsets placeholder proxy values (`proxy:8080`) before Gradle to avoid listLibraries hangs caused by invalid proxy config.

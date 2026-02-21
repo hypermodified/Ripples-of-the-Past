@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_VERSION="port-checks-v3-hardfail-timeout"
+SCRIPT_VERSION="port-checks-v4-proxy-sane"
 MODE=""
 PROFILE=""
 
@@ -119,6 +119,16 @@ ensure_port_1201_target() {
 }
 
 ensure_port_1201_target
+
+sanitize_proxy_env_for_gradle() {
+  local proxy_blob="${GRADLE_OPTS:-} ${HTTP_PROXY:-} ${HTTPS_PROXY:-} ${http_proxy:-} ${https_proxy:-}"
+  if [[ "$proxy_blob" == *"proxy:8080"* ]]; then
+    echo "[run-local-checks] detected placeholder proxy env (proxy:8080); unsetting proxy variables for Gradle"
+    unset GRADLE_OPTS HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+  fi
+}
+
+sanitize_proxy_env_for_gradle
 
 select_compatible_java() {
   local current_major
