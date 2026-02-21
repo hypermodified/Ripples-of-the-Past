@@ -6,6 +6,7 @@ import com.github.standobyte.jojo.JojoMod;
 import com.github.standobyte.jojo.entity.stand.StandEntity;
 import com.github.standobyte.jojo.network.PacketManager;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.network.packets.fromserver.StandCancelManualMovementPacket;
 import com.github.standobyte.jojo.power.impl.stand.IStandManifestation;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
@@ -58,9 +59,13 @@ public class ClStandManualMovementPacket {
 
         @Override
         public void handle(ClStandManualMovementPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) {
+                return;
+            }
             if (!isValid(msg)) {
                 player.connection.disconnect(new TranslationTextComponent("multiplayer.disconnect.invalid_stand_movement"));
+                return;
             }
             IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                 IStandManifestation standManifestation = power.getStandManifestation();

@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketBufferUtil;
 import com.github.standobyte.jojo.util.mc.damage.explosion.CustomExplosion;
 import com.github.standobyte.jojo.util.mc.damage.explosion.CustomExplosion.CustomExplosionSupplier;
 import com.google.common.collect.Lists;
@@ -108,7 +109,7 @@ public class CustomExplosionPacket {
             ResourceLocation type = buf.readResourceLocation();
             
             CustomExplosionPacket packet = new CustomExplosionPacket(null, xPos, yPos, zPos, power, toBlow, new Vector3d(knockbackX, knockbackY, knockbackZ), type);
-            packet.extraData = buf;
+            packet.extraData = PacketBufferUtil.copyReadableBytes(buf);
             return packet;
         }
 
