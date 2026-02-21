@@ -1,0 +1,104 @@
+name: Build Test JAR (Clean)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 1.16.5
+    paths:
+      - 'src/**'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - 'gradle/**'
+      - 'scripts/run-local-checks.sh'
+      - 'porting/gradle-1.20.1-packet-manager-slice.properties'
+      - 'porting/gradle-1.20.1-ci.properties'
+      - '.github/workflows/build-test-jar.yml'
+
+jobs:
+  build-test-jar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Print dispatch context
+        shell: bash
+        run: |
+          echo "event=${GITHUB_EVENT_NAME}"
+          echo "ref=${GITHUB_REF}"
+          echo "ref_name=${GITHUB_REF_NAME}"
+
+      - name: Fail fast unless running from 1.16.5 branch
+        if: ${{ github.ref_name != '1.16.5' }}
+        shell: bash
+        run: |
+          echo "::error::This workflow must be run from branch '1.16.5'."
+          echo "::error::You ran from '${GITHUB_REF_NAME}'."
+          echo "::error::In Actions -> Build Test JAR (Clean), click Run workflow and select branch '1.16.5'."
+          exit 1
+
+      - name: Checkout current ref (no custom refspec)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties', 'porting/gradle-1.20.1-packet-manager-slice.properties', 'porting/gradle-1.20.1-ci.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Fast-fail compile gate (minimal packet-manager profile)
+        shell: bash
+        run: |
+          chmod +x gradlew scripts/run-local-checks.sh
+          SMOKE_TIMEOUT_SECONDS=600 bash scripts/run-local-checks.sh --port-1201-smoke --port-profile porting/gradle-1.20.1-ci.properties
+
+      - name: Build test JAR (only after compile gate passes)
+        shell: bash
+        run: |
+          PORT_BUILD_JAR_TIMEOUT_SECONDS=1200 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
+
+      - name: Verify built JAR metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar_path="$(ls build/libs/*.jar | head -n1)"
+          unzip -p "$jar_path" META-INF/mods.toml > /tmp/mods.toml.from.jar
+
+          if ! grep -Fq 'modId="playeranimator"' /tmp/mods.toml.from.jar; then
+            echo "::error::playeranimator dependency block missing from built jar mods.toml"
+            exit 1
+          fi
+          if ! grep -Fq 'versionRange="[0,)"' /tmp/mods.toml.from.jar; then
+            echo "::error::Built jar missing expected playeranimator range [0,)"
+            exit 1
+          fi
+
+          {
+            echo "ref=${GITHUB_REF}"
+            echo "sha=${GITHUB_SHA}"
+            echo "jar=${jar_path}"
+            echo "playeranimator_range=[0,)"
+          } > build/libs/build-metadata.txt
+
+      - name: Upload test JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ripples-test-jar-${{ github.sha }}
+          path: |
+            build/libs/*.jar
+            build/libs/build-metadata.txt
+          if-no-files-found: error

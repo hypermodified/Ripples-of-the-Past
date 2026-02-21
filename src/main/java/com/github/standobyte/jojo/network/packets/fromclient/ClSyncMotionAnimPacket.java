@@ -4,9 +4,10 @@ import java.util.function.Supplier;
 
 import com.github.standobyte.jojo.network.PacketManager;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.network.packets.fromserver.SyncMotionAnimStatePacket;
 
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -43,7 +44,10 @@ public class ClSyncMotionAnimPacket {
         @Override
         public void handle(ClSyncMotionAnimPacket msg, Supplier<NetworkEvent.Context> ctx) {
             if (Double.isFinite(msg.movementUp) && Double.isFinite(msg.movementLeft) && Float.isFinite(msg.speed)) {
-                PlayerEntity player = ctx.get().getSender();
+                ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+                if (player == null) {
+                    return;
+                }
                 PacketManager.sendToClientsTracking(new SyncMotionAnimStatePacket(player.getId(), msg), player);
             }
         }

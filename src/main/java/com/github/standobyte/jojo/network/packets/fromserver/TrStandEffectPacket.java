@@ -7,6 +7,7 @@ import com.github.standobyte.jojo.action.stand.effect.StandEffectInstance;
 import com.github.standobyte.jojo.action.stand.effect.StandEffectType;
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketBufferUtil;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import com.github.standobyte.jojo.power.impl.stand.StandEffectsTracker;
 
@@ -23,7 +24,7 @@ public class TrStandEffectPacket {
     private final StandEffectType<?> effectFactory;
     private final StandEffectInstance effect;
     private final boolean isUser;
-    private final PacketBuffer buf;
+    private final PacketBuffer payloadData;
     
     public static TrStandEffectPacket add(StandEffectInstance effect, boolean sentToOwner) {
         return new TrStandEffectPacket(PacketType.ADD, effect.getStandUser().getId(), effect.getId(), 
@@ -45,7 +46,7 @@ public class TrStandEffectPacket {
     }
     
     private TrStandEffectPacket(PacketType packetType, int userId, int effectId, int targetId, 
-            StandEffectType<?> effectFactory, StandEffectInstance effect, boolean isUser, PacketBuffer buf) {
+            StandEffectType<?> effectFactory, StandEffectInstance effect, boolean isUser, PacketBuffer payloadData) {
         this.packetType = packetType;
         this.userId = userId;
         this.effectId = effectId;
@@ -53,7 +54,7 @@ public class TrStandEffectPacket {
         this.effectFactory = effectFactory;
         this.effect = effect;
         this.isUser = isUser;
-        this.buf = buf;
+        this.payloadData = payloadData;
     }
     
     
@@ -93,7 +94,7 @@ public class TrStandEffectPacket {
             switch (type) {
             case ADD:
                 return new TrStandEffectPacket(type, buf.readInt(), buf.readInt(), 
-                        buf.readInt(), buf.readRegistryIdSafe(StandEffectType.class), null, buf.readBoolean(), buf);
+                        buf.readInt(), buf.readRegistryIdSafe(StandEffectType.class), null, buf.readBoolean(), PacketBufferUtil.copyReadableBytes(buf));
             case REMOVE:
                 return new TrStandEffectPacket(type, buf.readInt(), buf.readInt(), 
                         -1, null, null, false, null);
@@ -117,9 +118,12 @@ public class TrStandEffectPacket {
                             newEffect.withTargetEntityId(msg.targetId);
                         }
                         
-                        newEffect.tickCount = msg.buf.readVarInt();
-                        newEffect.readAdditionalPacketData(msg.buf);
-                        newEffect.readAdditionalPacketData(msg.buf, msg.isUser);
+                        if (msg.payloadData == null) {
+                            break;
+                        }
+                        newEffect.tickCount = msg.payloadData.readVarInt();
+                        newEffect.readAdditionalPacketData(msg.payloadData);
+                        newEffect.readAdditionalPacketData(msg.payloadData, msg.isUser);
                         stand.getContinuousEffects().addEffect(newEffect);
                         break;
                     case REMOVE:
