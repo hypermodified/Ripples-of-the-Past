@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import com.github.standobyte.jojo.capability.entity.player.PlayerClientBroadcastedSettings;
 import com.github.standobyte.jojo.client.ClientUtil;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketBufferUtil;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -34,7 +35,7 @@ public class TrPlayerModSettingsPacket {
         @Override
         public TrPlayerModSettingsPacket decode(PacketBuffer buf) {
             TrPlayerModSettingsPacket packet = new TrPlayerModSettingsPacket(buf.readInt(), null);
-            packet.settingsData = buf;
+            packet.settingsData = PacketBufferUtil.copyReadableBytes(buf);
             return packet;
         }
 

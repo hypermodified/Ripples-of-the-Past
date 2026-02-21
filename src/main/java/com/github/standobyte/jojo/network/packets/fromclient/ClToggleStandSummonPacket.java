@@ -3,6 +3,7 @@ package com.github.standobyte.jojo.network.packets.fromclient;
 import java.util.function.Supplier;
 
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 
 import net.minecraft.entity.player.PlayerEntity;
@@ -25,8 +26,8 @@ public class ClToggleStandSummonPacket {
     
         @Override
         public void handle(ClToggleStandSummonPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            PlayerEntity player = ctx.get().getSender();
-            if (player.isAlive()) {
+            PlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player != null && player.isAlive()) {
                 IStandPower.getStandPowerOptional(player).ifPresent(power -> {
                     power.toggleSummon();
                 });
