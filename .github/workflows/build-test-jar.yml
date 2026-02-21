@@ -66,8 +66,6 @@ jobs:
           GRADLE_OPTS: ""
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
-          http_proxy: ""
-          https_proxy: ""
         run: |
           chmod +x gradlew scripts/run-local-checks.sh
           PORT_BUILD_JAR_TIMEOUT_SECONDS=1800 bash scripts/run-local-checks.sh --port-1201-build-jar --port-profile porting/gradle-1.20.1-ci.properties
