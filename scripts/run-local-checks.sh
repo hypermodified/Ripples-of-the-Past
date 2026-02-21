@@ -173,7 +173,7 @@ run_gradle_with_retry() {
     local phase="$1"
     while true; do
       sleep 30
-      echo "[run-local-checks] still running (${phase}) ... $(date -u +%H:%M:%S UTC)"
+      echo "[run-local-checks] still running (${phase}) ... $(date -u +"%H:%M:%S UTC")"
     done
   }
 
@@ -198,10 +198,16 @@ run_gradle_with_retry() {
     return 0
   fi
 
-  if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\\.minecraftforge\\.installertools\\.ConsoleTool|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
+  if grep -Eq "Execution failed for task ':compileJava'|Compilation failed; see the compiler error output for details" "$log_file"; then
+    echo "[run-local-checks] compile failure detected; skipping cache-clean retry to avoid duplicate long runs"
+    rm -f "$log_file"
+    return 1
+  fi
+
+  if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
     echo "[run-local-checks] detected corrupted ForgeGradle cache artifacts; clearing cache and retrying once"
   else
-    echo "[run-local-checks] first Gradle invocation failed; performing one cache-clean retry in case of transient runner corruption"
+    echo "[run-local-checks] non-compile failure detected; retrying once with cache clean and refreshed dependencies"
   fi
 
   clear_forge_gradle_caches

@@ -60,13 +60,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Pre-clean known ForgeGradle corrupted caches
-        shell: bash
-        run: |
-          rm -rf ~/.gradle/caches/forge_gradle || true
-          rm -rf ~/.gradle/caches/modules-2/files-2.1/net.minecraftforge/installertools || true
-          rm -rf ~/.gradle/caches/modules-2/files-2.1/net/minecraftforge/installertools || true
-
       - name: Build test JAR (minimal packet-manager profile)
         shell: bash
         run: |
