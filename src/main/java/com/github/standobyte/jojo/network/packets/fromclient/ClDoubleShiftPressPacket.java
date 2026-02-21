@@ -6,10 +6,12 @@ import com.github.standobyte.jojo.capability.entity.PlayerUtilCapProvider;
 import com.github.standobyte.jojo.init.power.non_stand.ModPowers;
 import com.github.standobyte.jojo.init.power.non_stand.hamon.ModHamonSkills;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.impl.nonstand.INonStandPower;
 import com.github.standobyte.jojo.util.general.GeneralUtil;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -29,7 +31,10 @@ public class ClDoubleShiftPressPacket {
     
         @Override
         public void handle(ClDoubleShiftPressPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            PlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) {
+                return;
+            }
             player.getCapability(PlayerUtilCapProvider.CAPABILITY).ifPresent(cap -> cap.setDoubleShiftPress());
         }
 
