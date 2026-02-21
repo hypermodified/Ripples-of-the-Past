@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import com.github.standobyte.jojo.capability.entity.PlayerUtilCapProvider;
 import com.github.standobyte.jojo.capability.entity.living.LivingWallClimbing;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
@@ -44,7 +45,8 @@ public class ClHasInputPacket {
 
         @Override
         public void handle(ClHasInputPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) return;
             if (msg.wallClimbing) {
                 LivingWallClimbing.getHandler(player).ifPresent(cap -> cap.wallClimbIsMoving = msg.hasInput);
             }
