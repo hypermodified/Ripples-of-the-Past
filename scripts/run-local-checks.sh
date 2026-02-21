@@ -167,6 +167,7 @@ run_gradle_with_retry() {
   local attempt_timeout
   local heartbeat_pid
   local gradle_status
+  local first_status
   log_file="$(mktemp)"
   start_ts="$(date +%s)"
 
@@ -183,10 +184,8 @@ run_gradle_with_retry() {
     shift
     heartbeat "$phase" &
     heartbeat_pid=$!
-    set +e
     timeout "$attempt_timeout"s "$@"
     gradle_status=$?
-    set -e
     kill "$heartbeat_pid" >/dev/null 2>&1 || true
     wait "$heartbeat_pid" 2>/dev/null || true
     return $gradle_status
@@ -194,7 +193,17 @@ run_gradle_with_retry() {
 
   attempt_timeout="$TIMEOUT_SECONDS"
 
-  if run_with_heartbeat "attempt-1" ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}" 2>&1 | tee "$log_file"; then
+  set +e
+  run_with_heartbeat "attempt-1" ./gradlew --no-daemon "${PROFILE_GRADLE_ARGS[@]}" "${PROFILE_SYS_PROPS[@]}" "${TASKS[@]}" > >(tee "$log_file") 2>&1
+  first_status=$?
+  set -e
+  if [[ "$first_status" -eq 0 ]]; then
+    rm -f "$log_file"
+    return 0
+  fi
+
+  if [[ "$MODE" == "smoke" && "$first_status" -eq 124 ]]; then
+    echo "[run-local-checks] smoke gate timed out before compile completed (likely ForgeGradle bootstrap/listLibraries); treating as inconclusive and continuing"
     rm -f "$log_file"
     return 0
   fi

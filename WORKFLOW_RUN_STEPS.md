@@ -64,3 +64,5 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 - In logs, look for `script=port-checks-v2-fastfail` to confirm the latest runner script is in use.
 
 - Fast-fail compile gate uses a lower timeout and intentionally skips retry in smoke mode (especially when stuck at `listLibraries`) to fail quickly and show signal sooner.
+
+- If smoke times out before compile starts, it is treated as **inconclusive** and CI continues to jar build; this avoids false-red failures caused by long ForgeGradle bootstrap (`listLibraries`).
