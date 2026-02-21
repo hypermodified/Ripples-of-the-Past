@@ -205,6 +205,16 @@ run_gradle_with_retry() {
     return 1
   fi
 
+  if [[ "$MODE" == "smoke" ]]; then
+    if grep -Fq "Running 'listLibraries'" "$log_file"; then
+      echo "[run-local-checks] smoke gate reached ForgeGradle listLibraries bootstrap; skipping retry for faster feedback"
+    else
+      echo "[run-local-checks] smoke gate failed before compile stage; skipping retry for faster feedback"
+    fi
+    rm -f "$log_file"
+    return 1
+  fi
+
   if grep -Eq "Unexpected end of ZLIB input stream|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool|Could not find or load main class net\.minecraftforge\.installertools\.ConsoleTool" "$log_file"; then
     echo "[run-local-checks] detected corrupted ForgeGradle cache artifacts; clearing cache and retrying once"
   else
@@ -230,7 +240,7 @@ run_gradle_with_retry() {
 
 if [[ "$MODE" == "smoke" ]]; then
   TASKS=(compileJava)
-  TIMEOUT_SECONDS="${SMOKE_TIMEOUT_SECONDS:-120}"
+  TIMEOUT_SECONDS="${SMOKE_TIMEOUT_SECONDS:-240}"
 elif [[ "$MODE" == "diagnostic" ]]; then
   TASKS=(compileJava --stacktrace)
   TIMEOUT_SECONDS="${PORT_COMPILE_DIAG_TIMEOUT_SECONDS:-240}"

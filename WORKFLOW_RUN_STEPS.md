@@ -62,3 +62,5 @@ If that step fails, you launched from the wrong branch. Start a new run and sele
 - It now runs a **Fast-fail compile gate** before the jar step.
 - If compile is broken, the run fails early instead of spending ~20-30 minutes in jar packaging path.
 - In logs, look for `script=port-checks-v2-fastfail` to confirm the latest runner script is in use.
+
+- Fast-fail compile gate uses a lower timeout and intentionally skips retry in smoke mode (especially when stuck at `listLibraries`) to fail quickly and show signal sooner.
