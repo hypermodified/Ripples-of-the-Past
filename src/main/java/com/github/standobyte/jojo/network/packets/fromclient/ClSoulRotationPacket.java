@@ -4,9 +4,11 @@ import java.util.function.Supplier;
 
 import com.github.standobyte.jojo.entity.SoulEntity;
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.google.common.primitives.Floats;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraftforge.fml.network.NetworkEvent;
 
@@ -40,7 +42,11 @@ public class ClSoulRotationPacket {
         @Override
         public void handle(ClSoulRotationPacket msg, Supplier<NetworkEvent.Context> ctx) {
             if (Floats.isFinite(msg.xRot) && Floats.isFinite(msg.yRot)) {
-                Entity entity = ctx.get().getSender().level.getEntity(msg.entityId);
+                ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+                if (player == null) {
+                    return;
+                }
+                Entity entity = player.level.getEntity(msg.entityId);
                 if (entity instanceof SoulEntity) {
                     ((SoulEntity) entity).handleRotationPacket(msg.yRot, msg.xRot);
                 }
