@@ -3,6 +3,7 @@ package com.github.standobyte.jojo.network.packets.fromclient;
 import java.util.function.Supplier;
 
 import com.github.standobyte.jojo.network.packets.IModPacketHandler;
+import com.github.standobyte.jojo.network.packets.PacketContextUtil;
 import com.github.standobyte.jojo.power.IPower;
 import com.github.standobyte.jojo.power.IPower.PowerClassification;
 import com.github.standobyte.jojo.util.mc.MCUtil;
@@ -45,7 +46,10 @@ public class ClOnLeapPacket {
 
         @Override
         public void handle(ClOnLeapPacket msg, Supplier<NetworkEvent.Context> ctx) {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayerEntity player = PacketContextUtil.getSender(ctx);
+            if (player == null) {
+                return;
+            }
             IPower.getPowerOptional(player, msg.classification).ifPresent(power -> {
                 if (power.canLeap()) {
                     float leapStrength = power.leapStrength();
